@@ -2,17 +2,18 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useEffect, useState } from 'react';
 import { UserWarning } from './UserWarning';
-import { USER_ID } from './api/todos';
+import { createTodo, deleteTodo, updateTodo, USER_ID } from './api/todos';
 import { getTodos } from './api/todos';
 import { Todo } from './types/Todo';
-import { client } from './utils/fetchClient';
+import Header from './Components/Header';
+import { FilterType } from './types/FilterType';
+import Footer from './Components/Footer';
+import TodoList from './Components/TodoList';
 
 interface OnDblClickParams {
   index: number;
   todo: Todo;
 }
-
-type FilterType = 'all' | 'active' | 'completed';
 
 export const App: React.FC = () => {
   const [todosDb, setTodosDb] = useState<Todo[]>([]);
@@ -27,29 +28,27 @@ export const App: React.FC = () => {
   useEffect(() => {
     setTodosToShow(
       todosDb.filter(todo => {
-        if (selectedFilter === 'all') {
-          return true;
+        switch (selectedFilter) {
+          case 'all':
+            return true;
+          case 'active':
+            return !todo.completed;
+          case 'completed':
+            return todo.completed;
+          default:
+            return todo.completed;
         }
-
-        if (selectedFilter === 'active') {
-          return !todo.completed;
-        }
-
-        return todo.completed;
       }),
     );
   }, [todosDb, selectedFilter]);
 
   useEffect(() => {
-    // setLoading(true);
     const fetchTodos = async () => {
       try {
         setTodosDb(await getTodos());
       } catch (err) {
         setError('Unable to load todos');
-        // console.error(error);
       } finally {
-        // setLoading(false);
       }
     };
 
@@ -68,11 +67,11 @@ export const App: React.FC = () => {
     return <UserWarning />;
   }
 
-  const deleteTodo = async (id: number) => {
+  const deleteTodoFunc = async (id: number) => {
     setLoadingTodoId(id);
     setError(null);
     try {
-      await client.delete(`/todos/${id}`);
+      await deleteTodo(id);
       setTodosDb(todosDb.filter(todo => todo.id !== id));
     } catch (err) {
       setError('Unable to delete a todo');
@@ -85,7 +84,7 @@ export const App: React.FC = () => {
     setLoadingTodoId(id);
     setError(null);
     try {
-      await client.patch(`/todos/${id}`, { completed });
+      await updateTodo(id, { completed });
       setTodosDb(
         todosDb.map(todo => {
           if (todo.id === id) {
@@ -102,11 +101,16 @@ export const App: React.FC = () => {
     }
   };
 
-  const updateTodo = async (id: number, title: string) => {
+  const updateTodoFunc = async (
+    id: number,
+    title: string,
+    e?: React.FormEvent<HTMLFormElement>,
+  ) => {
+    e?.preventDefault();
     setLoadingTodoId(id);
     setError(null);
     try {
-      await client.patch(`/todos/${id}`, { title });
+      await updateTodo(id, { title });
       setTodosDb(
         todosDb.map(todo => {
           if (todo.id === id) {
@@ -126,13 +130,14 @@ export const App: React.FC = () => {
     setEditIndex(null);
   };
 
-  const addTodo = async (title: string) => {
+  const addTodo = async (
+    e: React.FormEvent<HTMLFormElement>,
+    title: string,
+  ) => {
+    e.preventDefault();
     setError(null);
     try {
-      const todo = await client.post<Todo>('/todos', {
-        title,
-        completed: false,
-      });
+      const todo = await createTodo(title);
 
       setTodosDb([...todosDb, todo]);
       setNewTodoTitle('');
@@ -148,13 +153,10 @@ export const App: React.FC = () => {
   };
 
   const clearCompleted = () => {
-    // setLoadingTodoId(true);
     setError(null);
     try {
       const completedTodos = todosDb.filter(todo => todo.completed);
-      const promises = completedTodos.map(todo =>
-        client.delete(`/todos/${todo.id}`),
-      );
+      const promises = completedTodos.map(todo => deleteTodo(todo.id));
 
       Promise.all(promises).then(() => {
         setTodosDb(todosDb.filter(todo => !todo.completed));
@@ -162,7 +164,6 @@ export const App: React.FC = () => {
     } catch (err) {
       setError('Unable to delete a todo');
     } finally {
-      // setLoadingTodoId(false);
     }
   };
 
@@ -171,138 +172,32 @@ export const App: React.FC = () => {
       <h1 className="todoapp__title">todos</h1>
 
       <div className="todoapp__content">
-        <header className="todoapp__header">
-          <button
-            type="button"
-            className={`todoapp__toggle-all ${todosDb.every(todo => todo.completed) ? 'active' : ''}`}
-            data-cy="ToggleAllButton"
-          />
+        <Header
+          todosDb={todosDb}
+          newTodoTitle={newTodoTitle}
+          setNewTodoTitle={setNewTodoTitle}
+          addTodo={addTodo}
+        />
 
-          <form onSubmit={() => addTodo(newTodoTitle)}>
-            <input
-              data-cy="NewTodoField"
-              type="text"
-              className="todoapp__new-todo"
-              placeholder="What needs to be done?"
-              value={newTodoTitle}
-              onChange={e => setNewTodoTitle(e.target.value)}
-            />
-          </form>
-        </header>
+        <TodoList
+          todosToShow={todosToShow}
+          editIndex={editIndex}
+          editValue={editValue}
+          setEditValue={setEditValue}
+          onDblClick={onDblClick}
+          updateTodo={updateTodoFunc}
+          deleteTodo={deleteTodoFunc}
+          completeTodo={completeTodo}
+          loadingTodoId={loadingTodoId}
+        />
 
-        <section className="todoapp__main" data-cy="TodoList">
-          {todosToShow.map((todo, index) => {
-            return (
-              <div
-                data-cy="Todo"
-                className={`todo ${todo.completed ? 'completed' : ''}`}
-                key={todo.id}
-              >
-                <label className="todo__status-label">
-                  <input
-                    data-cy="TodoStatus"
-                    type="checkbox"
-                    className="todo__status"
-                    checked={todo.completed}
-                    onClick={() => completeTodo(todo.id, !todo.completed)}
-                  />
-                </label>
-
-                {editIndex === index ? (
-                  <form
-                    onSubmit={() => updateTodo(todo.id, editValue)}
-                    onBlur={() => updateTodo(todo.id, editValue)}
-                  >
-                    <input
-                      data-cy="TodoTitleField"
-                      type="text"
-                      className="todo__title-field"
-                      placeholder="Empty todo will be deleted"
-                      onChange={e => setEditValue(e.target.value)}
-                      value={editValue}
-                      autoFocus
-                    />
-                  </form>
-                ) : (
-                  <>
-                    <span
-                      data-cy="TodoTitle"
-                      className="todo__title"
-                      onDoubleClick={() => onDblClick({ index, todo })}
-                    >
-                      {todo.title}
-                    </span>
-                    <button
-                      type="button"
-                      className="todo__remove"
-                      data-cy="TodoDelete"
-                      onClick={() => deleteTodo(todo.id)}
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
-
-                <div
-                  data-cy="TodoLoader"
-                  className={`modal overlay ${loadingTodoId === todo.id ? 'is-active' : ''}`}
-                >
-                  <div className="modal-background has-background-white-ter" />
-                  <div className="loader" />
-                </div>
-              </div>
-            );
-          })}
-        </section>
         {todosDb.length > 0 && (
-          <footer className="todoapp__footer" data-cy="Footer">
-            <span className="todo-count" data-cy="TodosCounter">
-              {todosDb.reduce((accumulator, value) => {
-                return accumulator + (value.completed ? 0 : 1);
-              }, 0)}{' '}
-              items left
-            </span>
-
-            <nav className="filter" data-cy="Filter">
-              <a
-                href="#/"
-                className={`filter__link ${selectedFilter === 'all' ? 'selected' : ''}`}
-                data-cy="FilterLinkAll"
-                onClick={() => setSelectedFilter('all')}
-              >
-                All
-              </a>
-
-              <a
-                href="#/active"
-                className={`filter__link ${selectedFilter === 'active' ? 'selected' : ''}`}
-                data-cy="FilterLinkActive"
-                onClick={() => setSelectedFilter('active')}
-              >
-                Active
-              </a>
-
-              <a
-                href="#/completed"
-                className={`filter__link ${selectedFilter === 'completed' ? 'selected' : ''}`}
-                data-cy="FilterLinkCompleted"
-                onClick={() => setSelectedFilter('completed')}
-              >
-                Completed
-              </a>
-            </nav>
-
-            {todosDb.some(todo => todo.completed) && (
-              <button
-                type="button"
-                className="todoapp__clear-completed hiden"
-                data-cy="ClearCompletedButton"
-                onClick={() => clearCompleted()}
-              >
-                Clear completed
-              </button>
-            )}
-          </footer>
+          <Footer
+            todosDb={todosDb}
+            selectedFilter={selectedFilter}
+            setSelectedFilter={setSelectedFilter}
+            clearCompleted={clearCompleted}
+          />
         )}
       </div>
 
