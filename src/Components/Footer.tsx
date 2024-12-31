@@ -1,6 +1,6 @@
 import React from 'react';
 import { Todo } from '../types/Todo';
-import { FilterType } from '../types/FilterType';
+import { FILTER_TYPES, FilterType } from '../types/FilterType';
 
 type FooterProps = {
   todosDb: Todo[];
@@ -27,7 +27,7 @@ const Footer: React.FC<FooterProps> = ({
       <nav className="filter" data-cy="Filter">
         <a
           href="#/"
-          className={`filter__link ${selectedFilter === 'all' ? 'selected' : ''}`}
+          className={`filter__link ${selectedFilter === FILTER_TYPES.ALL ? 'selected' : ''}`}
           data-cy="FilterLinkAll"
           onClick={() => setSelectedFilter('all')}
         >
@@ -36,7 +36,7 @@ const Footer: React.FC<FooterProps> = ({
 
         <a
           href="#/active"
-          className={`filter__link ${selectedFilter === 'active' ? 'selected' : ''}`}
+          className={`filter__link ${selectedFilter === FILTER_TYPES.ACTIVE ? 'selected' : ''}`}
           data-cy="FilterLinkActive"
           onClick={() => setSelectedFilter('active')}
         >
@@ -45,7 +45,7 @@ const Footer: React.FC<FooterProps> = ({
 
         <a
           href="#/completed"
-          className={`filter__link ${selectedFilter === 'completed' ? 'selected' : ''}`}
+          className={`filter__link ${selectedFilter === FILTER_TYPES.COMPLETED ? 'selected' : ''}`}
           data-cy="FilterLinkCompleted"
           onClick={() => setSelectedFilter('completed')}
         >

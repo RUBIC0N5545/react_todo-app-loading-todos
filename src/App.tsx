@@ -6,7 +6,7 @@ import { createTodo, deleteTodo, updateTodo, USER_ID } from './api/todos';
 import { getTodos } from './api/todos';
 import { Todo } from './types/Todo';
 import Header from './Components/Header';
-import { FilterType } from './types/FilterType';
+import { FilterType, FILTER_TYPES } from './types/FilterType';
 import Footer from './Components/Footer';
 import TodoList from './Components/TodoList';
 
@@ -29,11 +29,11 @@ export const App: React.FC = () => {
     setTodosToShow(
       todosDb.filter(todo => {
         switch (selectedFilter) {
-          case 'all':
+          case FILTER_TYPES.ALL:
             return true;
-          case 'active':
+          case FILTER_TYPES.ACTIVE:
             return !todo.completed;
-          case 'completed':
+          case FILTER_TYPES.COMPLETED:
             return todo.completed;
           default:
             return todo.completed;
