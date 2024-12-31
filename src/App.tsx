@@ -22,7 +22,9 @@ export const App: React.FC = () => {
   const [loadingTodoId, setLoadingTodoId] = useState<number | null>(null);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>(
+    FILTER_TYPES.ALL as FilterType,
+  );
   const [newTodoTitle, setNewTodoTitle] = useState<string>('');
 
   useEffect(() => {
